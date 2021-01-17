@@ -31,4 +31,4 @@
 *.out
 *.app
 
-.DB_Store
+.DS_Store
