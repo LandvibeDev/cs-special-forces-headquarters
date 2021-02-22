@@ -381,6 +381,125 @@ Accept-language: fr
 - 메일 서버끼리는 여전히 SMTP 사용
 
 ## 2.4 DNS - 인터넷의 디렉터리 서비스
+- 인터넷 호스트 식별
+  - 호스트 네임(hostname)
+    - `www.naver.com`, `www.google.com`
+  - IP 주소로도 식별됨
+
+### 2.4.1 DNS가 제공하는 서비스
+- DNS(domain name system)
+  - 호스트 네임을 IP로 주소로 변환해 주는 디렉터리 서비스
+  - 계층 구조로 이루어진 분산 데이터베이스
+  - 호스트가 분산 데이터베이스로 질의하도록 허락하는 애플리케이션 프로토콜
+- DNS 서버는 주로 BIND 소프트웨어를 수행하는 유닉스 컴퓨터
+- UDP 사용, 53 포트 사용
+- 호스트네임으로 IP를 얻는 과정
+  1. 같은 사용자 컴퓨터는 DNS 앱의 클라이언트측을 수행
+  2. 브라우저는 URL로부터 호스트네임 `www.naver.com`을 추출하고 호스트 네임을 DNS 앱의 클라이언트에 넘긴다
+  3. DNS 클라이언트는 DNS 서버로 호스트 네임을 포함하는 질의를 보낸다
+  4. DNS 클라이언트는 결국 호스트 네임에 대한 IP 주소를 가진 응답을 받게 된다.
+  5. 브라우저가 DNS로부터 IP주소를 받으면, 브라우저는 그 IP 주소와 그 주소의 80번 포트에 위치하는 HTTP 서버 프로세스로 TCP 연결을 초기화 한다
+
+#### Host Aliasing
+- 호스트는 하나 이상의 별명을 가질 수 있다
+- 예) `seoul.naver.com`는 `naver.com`, `www.naver.com`같은 2개의 별칭을 가질 수 있다
+- `npay.naver.com`는 정식 호스트 네임(canonical hostname)
+
+#### Mail Server Aliasing
+- 전자 메일 주소는 기억하기 쉬운 것이 좋음
+- `geonhee@naver.com`
+
+#### Load Distribution
+- DNS는 복제된 웹 서버 사이에서 부하 분산을 위해 사용된다
+- `google.com`과 같은 인기 있는 사이트는 여러 서버에 복제되어 있음
+- DNS에 여러 개의 IP를 연결하여 클라이언트로 하여금 여러 IP로 접근하게 하여 부하를 분산시킨다
+
+### 2.4.2 DNS 동작 원리 개요
+- 모든 매핑을 포함하는 하나의 네임서버를 사용할 때 문제점
+  - 서버의 고장: 네임 서버가 고장 나면, 전체 인터넷이 작동하지 않음
+  - 트래픽의 양: 단일 DNS 서버가 모든 DNS 질의를 처리해야한다
+  - 먼거리의 중앙 집중 데이터베이스: 단일 DNS 서버에서 물리적으로 먼 서버는 지연이 발생
+  - 유지 관리
+    - 모든 인터넷 호스트에 대한 레코드를 유지해야 한다
+    - 새로 등록되거나 변경된 호스트를 자주 갱신해야 한다
+    - 누구에게 호스트 변경 권한을 줘야할지에 대한 문제
+
+#### 분산 계층 데이터베이스
+- 서버들을 계층 형태로 전세계에 분산
+  - Root DNS server
+  - TLD(Top-level domain) DNS server
+  - Authoritative DNS server
+- 서버들에서 IP를 얻는 과정
+  1. 어떤 DNS 클라이언트가 호스트 네임 `www.amazon.com`의 IP 주소를 결정하기 원함
+  2. 루트 서버 중 하나에 접속. 루트 서버에서는 TLD 서버 IP 주소를 보낸다
+  3. 클라이언트는 TLD 서버 중 하나에 접속해서 도메인 `amazon.com`을 가진 Authoritative 서버의 IP 주소를 보낸다
+  4. 클라이언트는 `amazon.com`의 책임 서버중 하나로 접속. 책임 서버에서 `www.amazon.com`의 IP주소를 보낸다.
+
+![](image/CH.02애플리케이션계층-490e7.png)
+
+- 루트 DNS 서버
+  - 400개 이상의 루트 DNS 서버 존재(대부분 북미 지역)
+  - 아래 그림은 루트 DNS 가진 국가들을 표시
+![](image/CH.02애플리케이션계층-473be.png)
+
+- 최상위 레벨 도메인(TLD) 서버
+  - com, org, net, edu 같은 상위 레벨 도메인과 kr, uk, fr, ca, jp 같은 국가 상위 레벨 도메인에 대한 TLD 서버
+  - TLD를 제원하는 네트워크 인프라는 크고 복잡하다
+- 책임 DNS 서버
+  - 인터넷에서 접근하기 쉬운 호스트를 가진 모든 기관은 호스트 네임을 IP 주소로 매핑하는 공개적인 DNS 레코드를 제공해야 한다
+  - 기관의 책임 DNS 서버는 이 DNS 레코드를 가지고 있다
+  - 기관은 자신의 책임 DNS 서버의 구현을 선택할 수 있고, 서비스 제공자의 책임 DNS에 레코드를 저장하도록 비용을 지불하기도 함ㅁ
+
+![](image/CH.02애플리케이션계층-1688f.png)
+
+- 재귀적 질의(recursive query)  
+- 반복적 질의(iterative query)  
+
+#### DNS 캐싱
+- DNS를 위한 통신량을 줄이기 위해서 요청에 대한 IP를 로컬에 캐싱한다
+- 예시
+  - `apricot.nyu.edu`가 `cnn.com`에 대한 IP 주소를 `dns.nyu.edu`에 질의
+  - 몇시간 후에 `kiwi.nyu.edu`가 `dns.nyu.edu`에 게 같은 호스트네임 질의
+  - 캐싱으로 인해 로컬 DNS 서버는 두번째 질의한 호스트에게 다른 DNS 서버로 질의 없이 즉시 `cnn.com`의 IP 주소를 보냄
+  - TLD 서버의 IP를 저장할 수도 있어서 대부분의 질의에서 루트 DNS 질의는 피해감
+
+### 2.4.3 DNS 레코드와 메세지
+- 자원 레코드(resource rescord, RR)
+  - DNS 분산 데이터베이스를 구현한 DNS 서버들이 호스트 네임을 IP 주소로 매핑하기 위해 저장하는 자원들
+  - (Name, Value, Type, TTL)
+- TTL은 자원 레코드이 생존 기간(캐시에서 제거되는 시간)
+- Type별 구분
+  - Type = A
+    - Name은 호스트 네임
+    - Value는 IP
+    - (relay1.bar.foo.com, 145.37.56.24, A)
+  - Type = NS
+    - Name은 도메인
+    - Value는 책임 DNS 서버의 호스트 네임
+    - (foo.com, dns.foo.com, NS)
+  - Type = CNAME
+    - Value는 별칭 호스트 네임 Name에 대한 정식 호스트 네임
+    - 질의 호스트에게 호스트 네임에 대한 정식 이름을 제공
+    - (foo.com, relay1.bar.foo.com, CNAME)
+  - Type = MX
+    - Value는 별칭 호스트 네임 Name을 갖는 메일 서버의 정식 이름
+    - (foo.com, mail.bar.foo.com, MX)
+
+
+#### DNS 메세지
+
+![](image/CH.02애플리케이션계층-e1d28.png)
+
+#### DNS 데이터베이스에 레코드 삽입
+- DNS 데이터베이스에 레코드를 삽입하는 방법?
+- 등록 기관에 도메인을 등록
+  - 도메인 네임의 유일성 확인
+  - 도메인을 DNS 데이터베이스에 추가
+  - 돈을 받는 상업 기관
+- 도메인을 등록할 때 주책임 서버와 부 책임 서버의 이름과 IP를 등록해야함
+  - Type NS와 Type A 레코드를 TLD com 서버에 등록
+  - (landvibe.com, dns1.hellodns.com, NS)
+  - (dns1.hellodns.com, 212.212.212.1, A)
 
 ## 2.5 P2P 파일 분배
 
